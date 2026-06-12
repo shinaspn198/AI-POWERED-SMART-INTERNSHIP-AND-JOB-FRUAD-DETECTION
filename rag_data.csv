@@ -1,0 +1,7 @@
+document_id,document_type,chunk_id,chunk_text,metadata
+doc_001,internship_certificate,chunk_001,"This is a Certificate of Completion awarded to ANIRUDH K N.","candidate_name=ANIRUDH K N"
+doc_001,internship_certificate,chunk_002,"ANIRUDH K N successfully completed a 1-month internship program in Data Science & Analytics.","program=Data Science & Analytics;duration=1 month"
+doc_001,internship_certificate,chunk_003,"The internship was completed at Future Interns during Apr 2026.","company=Future Interns;month=Apr 2026"
+doc_001,internship_certificate,chunk_004,"The certificate date is 22/04/2026 and certificate ID is FIT/MAR26/DS15248.","date=22/04/2026;certificate_id=FIT/MAR26/DS15248"
+doc_001,internship_certificate,chunk_005,"The certificate mentions contact@futureinterns.com and futureinterns.com as contact details.","email=contact@futureinterns.com;website=futureinterns.com"
+doc_001,internship_certificate,chunk_006,"The certificate is signed by Sujan Kumar C, Co-Founder & Program Coordinator at Future Interns.","signed_by=Sujan Kumar C;designation=Co-Founder & Program Coordinator"
