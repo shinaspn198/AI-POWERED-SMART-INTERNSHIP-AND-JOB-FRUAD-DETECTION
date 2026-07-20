@@ -22,16 +22,17 @@ except Exception:
 try:
     from PIL import Image
     import pytesseract
-   import shutil
+    import shutil
 
-tesseract = shutil.which("tesseract")
+    # Automatically find Tesseract
+    tesseract = shutil.which("tesseract")
 
-if tesseract:
-    pytesseract.pytesseract.tesseract_cmd = tesseract
-    OCR_AVAILABLE = True
-else:
-    OCR_AVAILABLE = False
-    OCR_AVAILABLE = True
+    if tesseract:
+        pytesseract.pytesseract.tesseract_cmd = tesseract
+        OCR_AVAILABLE = True
+    else:
+        OCR_AVAILABLE = False
+
 except Exception:
     OCR_AVAILABLE = False
 
