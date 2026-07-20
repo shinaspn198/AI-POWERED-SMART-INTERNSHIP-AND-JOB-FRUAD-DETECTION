@@ -1,28 +1,12 @@
-# Virtual Environment
 .venv/
-venv/
-
-# Python
 __pycache__/
-*.py[cod]
-*.class
+.env
 
-# IDE
+*.pyc
+
 .idea/
 .vscode/
 
-# Environment variables
-.env
-
-# Streamlit
-.streamlit/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Jupyter
-.ipynb_checkpoints/
-
-# Large datasets (optional)
 dataset/job_posts.csv
+
+*.log
