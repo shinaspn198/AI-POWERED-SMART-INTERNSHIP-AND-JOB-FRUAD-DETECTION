@@ -16,18 +16,18 @@ import google.generativeai as genai
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 
-    genai.configure(
-        api_key=API_KEY
-    )
+    genai.configure(api_key=API_KEY)
 
-    gemini_model = genai.GenerativeModel(
-        "gemini-1.5-flash"
-    )
+    print("Available Gemini models:")
+    for model in genai.list_models():
+        if "generateContent" in model.supported_generation_methods:
+            print(model.name)
+
+    gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 
 except Exception as e:
     gemini_model = None
     print("Gemini error:", e)
-
 
 
 # ==========================
