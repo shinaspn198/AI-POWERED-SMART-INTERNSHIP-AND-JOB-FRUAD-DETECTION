@@ -15,19 +15,19 @@ import google.generativeai as genai
 
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
-
     genai.configure(api_key=API_KEY)
 
-    print("Available Gemini models:")
+    print("===== AVAILABLE MODELS =====")
     for model in genai.list_models():
         if "generateContent" in model.supported_generation_methods:
             print(model.name)
+    print("============================")
 
     gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 
 except Exception as e:
     gemini_model = None
-    print("Gemini error:", e)
+    print(e)
 
 
 # ==========================
