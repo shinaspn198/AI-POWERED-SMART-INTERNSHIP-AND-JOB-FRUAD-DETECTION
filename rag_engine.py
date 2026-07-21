@@ -23,11 +23,12 @@ try:
             print(model.name)
     print("============================")
 
-MODEL_NAME = "gemini-flash-latest"
-gemini_model = genai.GenerativeModel(MODEL_NAME)
+    MODEL_NAME = "gemini-flash-latest"
+    gemini_model = genai.GenerativeModel(MODEL_NAME)
+
 except Exception as e:
     gemini_model = None
-    print(e)
+    print("Gemini initialization error:", e)
 
 
 # ==========================
