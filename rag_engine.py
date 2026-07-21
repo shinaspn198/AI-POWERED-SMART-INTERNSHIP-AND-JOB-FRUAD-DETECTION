@@ -23,7 +23,9 @@ try:
             print(model.name)
     print("============================")
 
-    gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+  gemini_model = genai.GenerativeModel(
+    "gemini-2.0-flash"
+)
 
 except Exception as e:
     gemini_model = None
