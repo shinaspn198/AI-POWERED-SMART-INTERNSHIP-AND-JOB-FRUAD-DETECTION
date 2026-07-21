@@ -1,58 +1,340 @@
 import os
 import re
-from groq import Groq
-from dotenv import load_dotenv
+import pandas as pd
+import streamlit as st
 
-load_dotenv()
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
-# -------------------------------------------------------
-# GROQ CLIENT — no torch, no sentence_transformers needed
-# -------------------------------------------------------
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+import google.generativeai as genai
 
-# -------------------------------------------------------
-# GROQ LLM ANSWER
-# -------------------------------------------------------
-def ask_groq(question, context):
-    prompt = f"""You are an AI assistant helping students in India verify job and internship documents for fraud.
 
-IMPORTANT: The document text below was extracted using OCR (optical character recognition) from a scanned PDF or image. It may contain OCR errors like garbled characters, wrong letters, or spacing issues. Please interpret it intelligently despite these errors.
+# ==========================
+# GEMINI CONFIG
+# ==========================
 
-Document content (may contain OCR errors):
----
-{context[:3000]}
----
+try:
+    API_KEY = st.secrets["GEMINI_API_KEY"]
 
-Question: {question}
+    genai.configure(
+        api_key=API_KEY
+    )
 
-Instructions:
-- Answer based on the document content above
-- If text looks garbled, try to interpret what it likely says
-- Extract exact values (names, dates, amounts, IDs) even if slightly garbled
-- For company name, look for letterhead, logo text, or "For [Company Name]" at the bottom
-- If truly cannot find the answer say: "This information is not found in the document."
-- Never say the document is fraudulent just because OCR text looks garbled
-"""
-    try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=400,
-            temperature=0.2
+    gemini_model = genai.GenerativeModel(
+        "gemini-1.5-flash"
+    )
+
+except Exception as e:
+    gemini_model = None
+    print("Gemini error:", e)
+
+
+
+# ==========================
+# PATH
+# ==========================
+
+BASE_DIR = os.path.dirname(
+    os.path.abspath(__file__)
+)
+
+CSV_PATH = os.path.join(
+    BASE_DIR,
+    "rag_data.csv"
+)
+
+
+
+# ==========================
+# EMBEDDING MODEL
+# ==========================
+
+embedding_model = None
+
+
+def get_embedding_model():
+
+    global embedding_model
+
+    if embedding_model is None:
+
+        embedding_model = SentenceTransformer(
+            "all-MiniLM-L6-v2"
         )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        return f"AI assistant error: {str(e)}"
 
-# -------------------------------------------------------
-# MAIN RAG ANSWER
-# -------------------------------------------------------
-def rag_answer(question, document_text=None):
-    question = question.strip()
-    if not question:
-        return "Please ask a question."
+    return embedding_model
 
-    if document_text and len(document_text.strip()) > 30:
-        return ask_groq(question, document_text)
 
-    return "Please upload or paste a document first so I can answer your questions about it."
+
+# ==========================
+# LOAD KNOWLEDGE BASE
+# ==========================
+
+
+chunks = None
+embeddings = None
+
+
+def load_rag_data():
+
+    global chunks
+    global embeddings
+
+
+    if chunks is None:
+
+        if os.path.exists(CSV_PATH):
+
+            df = pd.read_csv(
+                CSV_PATH
+            )
+
+            chunks = df["chunk_text"].tolist()
+
+            embeddings = (
+                get_embedding_model()
+                .encode(chunks)
+            )
+
+        else:
+
+            chunks=[]
+            embeddings=None
+
+
+    return chunks, embeddings
+
+
+
+
+# ==========================
+# DOCUMENT CHUNKING
+# ==========================
+
+
+def chunk_document(text):
+
+    sentences = re.split(
+        r'(?<=[.!?])\s+',
+        text
+    )
+
+    result=[]
+
+    temp=""
+
+    for s in sentences:
+
+        temp += " "+s
+
+        if len(temp)>300:
+
+            result.append(
+                temp.strip()
+            )
+
+            temp=""
+
+
+    if temp:
+
+        result.append(
+            temp.strip()
+        )
+
+    return result
+
+
+
+
+# ==========================
+# SIMPLE EXTRACTION
+# ==========================
+
+
+def extract_answer(text,question):
+
+    q=question.lower()
+
+
+    patterns={
+
+    "company":
+    r"(?:company|organization|from)[:\s]+([A-Za-z0-9 .&]+)",
+
+
+    "email":
+    r"[\w\.-]+@[\w\.-]+\.\w+",
+
+
+    "website":
+    r"(?:https?://|www\.)\S+",
+
+
+    "certificate":
+    r"(?:certificate id|id)[:\s]+([A-Za-z0-9-]+)",
+
+
+    "salary":
+    r"(?:₹|\$)\s?\d+[\d,]*",
+
+
+    }
+
+
+    for key,pattern in patterns.items():
+
+        if key in q:
+
+            match=re.search(
+                pattern,
+                text,
+                re.I
+            )
+
+            if match:
+
+                return match.group(0)
+
+
+    return None
+
+
+
+
+# ==========================
+# SEMANTIC SEARCH
+# ==========================
+
+
+def search_context(question,doc_chunks):
+
+
+    model=get_embedding_model()
+
+
+    doc_vectors=model.encode(
+        doc_chunks
+    )
+
+
+    q_vector=model.encode(
+        [question]
+    )
+
+
+    scores=cosine_similarity(
+        q_vector,
+        doc_vectors
+    )[0]
+
+
+    index=scores.argmax()
+
+
+    return doc_chunks[index]
+
+
+
+
+
+# ==========================
+# GEMINI ANSWER
+# ==========================
+
+
+def generate_answer(question,context):
+
+
+    if gemini_model is None:
+
+        return context
+
+
+
+    prompt=f"""
+
+You are a document verification assistant.
+
+Answer only from the given document.
+
+Document:
+{context}
+
+
+Question:
+{question}
+
+
+Give a short clear answer.
+"""
+
+
+    response=gemini_model.generate_content(
+        prompt
+    )
+
+
+    return response.text
+
+
+
+
+# ==========================
+# MAIN FUNCTION
+# ==========================
+
+
+def rag_answer(question,document_text=None):
+
+
+    if document_text:
+
+
+        direct=extract_answer(
+            document_text,
+            question
+        )
+
+
+        if direct:
+
+            return direct
+
+
+
+        chunks=chunk_document(
+            document_text
+        )
+
+
+        context=search_context(
+            question,
+            chunks
+        )
+
+
+        return generate_answer(
+            question,
+            context
+        )
+
+
+
+    base_chunks,base_embeddings=load_rag_data()
+
+
+    if base_chunks:
+
+        context=search_context(
+            question,
+            base_chunks
+        )
+
+        return generate_answer(
+            question,
+            context
+        )
+
+
+    return "No information found."
